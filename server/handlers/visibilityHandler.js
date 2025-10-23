@@ -5,7 +5,7 @@ const VISION_RANGE = 20; // Raio de visão em tiles
 
 // --- Estado Interno ---
 let ioInstance = null;
-const onlinePlayers = new Map(); // Guarda { characterId, name, position, socket } por socket.id
+export const onlinePlayers = new Map(); // Guarda { characterId, name, position, socket } por socket.id
 
 // --- Funções Auxiliares ---
 

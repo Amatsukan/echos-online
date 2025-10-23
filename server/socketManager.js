@@ -5,8 +5,9 @@ import { registerAuthenticationHandler } from './handlers/authenticationHandler.
 import { registerMovementHandler } from './handlers/movementHandler.js';
 import { registerDisconnectHandler } from './handlers/disconnectHandler.js';
 import { registerChatHandler } from './handlers/chatHandler.js';
-// Importa APENAS a inicialização
 import { initializeVisibilityHandler } from './handlers/visibilityHandler.js';
+// (NOVO) Importa a inicialização do Notification Handler
+import { initializeNotificationHandler } from './handlers/notificationHandler.js';
 
 /**
  * Inicializa o gestor principal de conexões Socket.IO.
@@ -14,20 +15,20 @@ import { initializeVisibilityHandler } from './handlers/visibilityHandler.js';
  */
 export function initializeSocketManager(io) {
     
-    // Inicializa o Visibility Handler com a instância do io
+    // Inicializa os handlers que precisam da instância 'io'
     initializeVisibilityHandler(io);
+    initializeNotificationHandler(io); // (NOVO) Inicializa o notification handler
 
     io.on('connection', (socket) => {
         console.log(`[SocketManager] Novo cliente conectado: ${socket.id}`);
 
         // --- Registo de Handlers ---
-        // Passamos 'io' apenas para os que precisam (chat)
         registerAuthenticationHandler(socket);
         registerLoginHandler(socket);
-        registerPlayerHandler(socket); // Não precisa mais de io
-        registerCharacterHandler(socket); // Não precisa mais de io
-        registerMovementHandler(socket); // Não precisa mais de io
-        registerChatHandler(io, socket); // Chat precisa para io.emit global
-        registerDisconnectHandler(socket); // Não precisa mais de io
+        registerPlayerHandler(socket); 
+        registerCharacterHandler(socket); 
+        registerMovementHandler(socket); 
+        registerChatHandler(io, socket);
+        registerDisconnectHandler(socket); 
     });
 }

@@ -1,0 +1,273 @@
+/* --- RESET BÁSICO --- */
+html, body {
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a1a;
+    font-family: sans-serif;
+    color: white;
+    overflow: hidden; /* Impede barras de scroll na página inteira */
+}
+/* Remove a margem padrão dos títulos */
+h1, h2, p {
+    margin: 0;
+}
+
+/* --- LAYOUT PRINCIPAL (CSS GRID) --- */
+.main-layout {
+    display: grid;
+    /* Colunas: Menu (fixo), Jogo (flexível), Sidebar (fixo) */
+    grid-template-columns: 200px 1fr 250px;
+    /* Linhas: Conteúdo Principal (flexível), Chat (fixo) */
+    grid-template-rows: 1fr auto;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* --- COLUNA DA ESQUERDA (MENU) --- */
+.menu-left {
+    grid-column: 1;
+    grid-row: 1;
+    background: #2a2a2a;
+    border-right: 2px solid #444;
+    padding: 15px;
+    overflow-y: auto; /* Scroll se tiver muitos botões */
+}
+.menu-left h1 {
+    font-size: 1.5em;
+    text-align: center;
+    margin-bottom: 15px;
+}
+.menu-button {
+    background-color: #333;
+    border: 2px solid red; /* Mantive a borda vermelha, podes mudar */
+    color: red; /* Mantive a cor vermelha */
+    font-weight: bold;
+    width: 100%;
+    height: 60px; /* Reduzi um pouco a altura para caber mais botões */
+    margin-bottom: 15px; /* Reduzi a margem */
+    cursor: pointer;
+    font-size: 1em; /* Reduzi um pouco a fonte */
+    transition: background-color 0.2s;
+    display: flex; /* Para centralizar o texto verticalmente */
+    justify-content: center;
+    align-items: center;
+    text-align: center; /* Garante centralização horizontal */
+}
+.menu-button:hover {
+    background-color: #444;
+}
+
+/* --- COLUNA CENTRAL (JOGO) --- */
+.game-center {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 0; /* Jogo ocupa todo o espaço */
+    overflow: hidden;
+    background: #000; /* Fundo preto caso o phaser demore a carregar */
+}
+#game-container {
+    padding-top: 2%;
+    padding-left: 5%;
+    width: 90%;
+    height: 90%;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+/* --- COLUNA DA DIREITA (SIDEBAR) --- */
+.sidebar-right {
+    grid-column: 3;
+    grid-row: 1;
+    background: #2a2a2a;
+    border-left: 2px solid #444;
+    padding: 10px;
+    overflow-y: auto;
+}
+.sidebar-right h2 {
+    font-size: 1.2em;
+    text-align: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #555;
+    padding-bottom: 5px;
+}
+
+/* Grelha de Equipamentos/Status (Layout Tibia) */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* 3 colunas */
+    gap: 5px; /* Espaço entre slots */
+    margin-bottom: 15px;
+}
+
+.equip-slot {
+    width: 100%; /* Ocupa a célula da grelha */
+    height: 0;
+    padding-bottom: 100%; /* Truque para manter o rácio 1:1 */
+    position: relative;
+    background-color: #333;
+    border: 2px solid #444;
+    border-radius: 5px;
+    cursor: help;
+    box-sizing: border-box;
+}
+.equip-slot-content {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 11px; /* Tamanho pequeno para nome de item */
+    color: #ddd;
+    font-weight: bold;
+    text-align: center;
+    padding: 4px;
+    word-break: break-word;
+}
+.equip-slot:hover {
+    border-color: #888;
+}
+
+/* Barras de HP/Mana */
+.status-bars {
+    margin-bottom: 15px;
+    padding: 5px;
+    background: #222;
+    border: 2px solid #444;
+    border-radius: 5px;
+}
+.bar-container {
+    width: 100%;
+    height: 15px;
+    background-color: #111;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 2px;
+    box-sizing: border-box;
+}
+.bar-container.hp-bar { margin-bottom: 5px; }
+
+.hp-bar div {
+    height: 100%;
+    background-color: #ff0000; /* Vermelho */
+    border-radius: 3px;
+    transition: width 0.3s ease; /* Animação */
+}
+.mana-bar div {
+    height: 100%;
+    background-color: #0000ff; /* Azul */
+    border-radius: 3px;
+    transition: width 0.3s ease; /* Animação */
+}
+
+/* Grelha da Mochila */
+.backpack-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 colunas */
+    gap: 5px;
+}
+.backpack-slot {
+     width: 100%;
+    height: 0;
+    padding-bottom: 100%; /* Rácio 1:1 */
+    background-color: #333;
+    border: 2px solid #444;
+    border-radius: 5px;
+    position: relative; /* Para posicionar o conteúdo */
+}
+ .backpack-slot-content {
+     position: absolute;
+     top: 4px; left: 4px; right: 4px; bottom: 4px;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     text-align: center;
+     font-size: 11px;
+     font-weight: bold;
+     color: #ddd;
+     word-break: break-word;
+}
+.backpack-slot:hover {
+    border-color: #888;
+}
+
+/* --- LINHA INFERIOR (CHAT) --- */
+.chat-area {
+    grid-column: 1 / 4; /* Ocupa as 3 colunas */
+    grid-row: 2;
+    background: #2a2a2a;
+    border-top: 2px solid #444;
+    padding: 10px;
+}
+.chat-tabs {
+    margin-bottom: 5px;
+}
+.chat-tabs button {
+    background: #444;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent; 
+}
+.chat-tabs button.active {
+    background: #555;
+    border-bottom: 2px solid #007bff;
+}
+.chat-messages {
+    background-color: #1a1a1a;
+    height: 80px;
+    border: 1px solid #444;
+    padding: 5px;
+    overflow-y: scroll;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+.chat-messages p {
+    margin-bottom: 3px;
+    word-wrap: break-word;
+}
+.chat-messages p strong {
+    color: #00aaff; 
+}
+.chat-messages p.global-chat strong {
+    color: #ffb700; 
+}
+.chat-messages p.global-chat {
+    color: #f0f0f0; 
+}
+
+.chat-input-area {
+    display: flex;
+}
+.chat-input-area label {
+    margin-right: 10px;
+    flex-shrink: 0;
+    padding-top: 5px;
+    font-style: italic;
+    color: #aaa;
+}
+.chat-input-area input {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #444;
+    border-radius: 5px;
+    background-color: #333;
+    color: white;
+}
+.send-chat-msg {
+    background: #007bff;
+    border: none;
+    color: white;
+    padding: 0 10px;
+    margin-left: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.send-chat-msg:hover {
+    background: #0056b3;
+}

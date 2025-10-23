@@ -1,0 +1,91 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #1a1a1a;
+    font-family: sans-serif;
+    color: white;
+    text-align: center;
+}
+.container {
+    background-color: #2a2a2a;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.7);
+    width: 80%;
+    max-width: 800px;
+}
+h1 {
+    margin-bottom: 10px;
+}
+p.subtitle { /* Adicionado classe para o parágrafo */
+    margin-bottom: 30px;
+    color: #ccc;
+}
+.character-slots {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap; /* Permite que os slots quebrem linha se não couberem */
+}
+.slot {
+    background-color: #333;
+    border: 2px solid #444;
+    border-radius: 10px;
+    width: 180px; /* Largura fixa */
+    height: 250px; /* Altura fixa */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow: hidden; /* Evita que conteúdo longo saia do slot */
+}
+.slot:hover {
+    border-color: #007bff;
+    transform: translateY(-5px);
+    background-color: #3a3a3a;
+}
+.slot img {
+    width: 100px; /* Tamanho fixo para a imagem */
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover; /* Garante que a imagem cubra o espaço */
+    margin-bottom: 10px;
+}
+.slot h2 { 
+    margin: 5px 0; /* Ajuste na margem */
+    font-size: 1.2em; 
+    word-break: break-word; /* Quebra nomes longos */
+}
+.slot .class-level { 
+    color: #aaa; 
+    font-style: italic; 
+    font-size: 0.9em; /* Ligeiramente menor */
+}
+.slot.new-char h2.plus-sign { /* Classe específica para o '+' */
+    font-size: 3em; /* Maior */
+    line-height: 1;
+    margin-bottom: 5px;
+}
+.slot.new-char p {
+    font-size: 1em;
+}
+
+/* Estilo para o link de logoff (opcional) */
+.logoff-link {
+    margin-top: 30px;
+    font-size: 0.9em;
+}
+.logoff-link a {
+    color: #ff8080; /* Cor diferente para logoff */
+    text-decoration: none;
+}
+.logoff-link a:hover {
+    text-decoration: underline;
+}
