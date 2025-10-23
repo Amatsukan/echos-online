@@ -1,0 +1,25 @@
+{
+  "name": "echoes-online",
+  "version": "1.0.0",
+  "description": "Servidor do echoes online MMORPG de Browser",
+  "type": "module",
+  "scripts": {
+    "start:game": "node server/server.js",
+    "start:client": "node client/server.js",
+    "start": "npx concurrently \"npm:start:game\" \"npm:start:client\"",
+    "dev:game": "npx nodemon server/server.js",
+    "dev:client": "npx nodemon client/server.js",
+    "dev": "npx concurrently --kill-others \"npm:dev:game\" \"npm:dev:client\""
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "express": "^5.1.0",
+    "joi": "^18.0.1",
+    "sequelize": "^6.37.7",
+    "socket.io": "^4.8.1",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

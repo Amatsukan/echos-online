@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seleção de Personagem - MMORPG</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #1a1a1a;
+            font-family: sans-serif;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            background-color: #2a2a2a;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.7);
+            width: 80%;
+            max-width: 800px;
+        }
+        h1 {
+            margin-bottom: 10px;
+        }
+        p {
+            margin-bottom: 30px;
+            color: #ccc;
+        }
+        .character-slots {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .slot {
+            background-color: #333;
+            border: 2px solid #444;
+            border-radius: 10px;
+            width: 180px;
+            height: 250px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .slot:hover {
+            border-color: #007bff;
+            transform: translateY(-5px);
+            background-color: #3a3a3a;
+        }
+        .slot h2 { margin: 10px 0 5px 0; font-size: 1.2em; }
+        .slot .class-level { color: #aaa; font-style: italic; }
+        .slot.new-char h2 { font-size: 2.5em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="welcome-title">Bem-vindo(a)!</h1>
+        <p>Selecione seu personagem ou crie um novo para entrar no mundo.</p>
+        
+        <div class="character-slots" id="character-slots-container">
+            </div>
+    </div>
+
+    <script>
+        // --- LÓGICA DA PÁGINA ---
+
+        // Ouve o evento 'DOMContentLoaded' que dispara quando o HTML da página está pronto.
+        document.addEventListener('DOMContentLoaded', () => {
+            const accountInfoString = sessionStorage.getItem('accountInfo');
+            
+            // 1. VERIFICAÇÃO DE SEGURANÇA CORRIGIDA
+            if (!accountInfoString) {
+                // Se não há informação da conta, não devia estar aqui. Volta para o login.
+                window.location.href = '/login.html';
+                return;
+            }
+
+            const accountInfo = JSON.parse(accountInfoString);
+            const welcomeTitle = document.getElementById('welcome-title');
+            const slotsContainer = document.getElementById('character-slots-container');
+
+            // Personaliza o título com o username vindo do objeto 'accountInfo'
+            welcomeTitle.textContent = `Bem-vindo(a), ${accountInfo.username}!`;
+
+            // 2. GERAÇÃO DINÂMICA DOS SLOTS
+            
+            slotsContainer.innerHTML = ''; 
+
+            accountInfo.characters.forEach(char => {
+                const slotHTML = `
+                    <div class="slot" data-char-info='${JSON.stringify(char)}'>
+                        <img src="https://placehold.co/100x100/555/FFF?text=${char.name.charAt(0)}" alt="Avatar de ${char.name}" style="border-radius: 50%;">
+                        <h2>${char.name}</h2>
+                        <p class="class-level">${char.class} - Nível ${char.level}</p>
+                    </div>
+                `;
+                slotsContainer.innerHTML += slotHTML;
+            });
+
+            const newCharSlotHTML = `
+                <div class="slot new-char">
+                    <h2 class="plus-sign">+</h2>
+                    <p>Criar Novo</p>
+                </div>
+            `;
+            slotsContainer.innerHTML += newCharSlotHTML;
+
+
+            // 3. ADICIONA EVENT LISTENERS AOS SLOTS GERADOS
+            
+            slotsContainer.querySelectorAll('.slot').forEach(slot => {
+                slot.addEventListener('click', function() {
+                    
+                    if (this.classList.contains('new-char')) {
+                        alert('A criação de personagens ainda não foi implementada!');
+                        return;
+                    }
+
+                    const selectedChar = JSON.parse(this.dataset.charInfo);
+
+                    // Guarda o OBJETO COMPLETO do personagem selecionado na sessão
+                    sessionStorage.setItem('selectedCharacter', JSON.stringify(selectedChar));
+
+                    // Redireciona para o mundo do jogo
+                    window.location.href = '/index.html';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

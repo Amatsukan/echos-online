@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMORPG de Browser - Cliente</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        /* [O SEU CSS ESTÁ CORRETO - SEM MUDANÇAS] */
+        /* --- RESET BÁSICO --- */
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            font-family: sans-serif;
+            color: white;
+            overflow: hidden; /* Impede barras de scroll na página inteira */
+        }
+        /* Remove a margem padrão dos títulos */
+        h1, h2, p {
+            margin: 0;
+        }
+
+        /* --- LAYOUT PRINCIPAL (CSS GRID) --- */
+        .main-layout {
+            display: grid;
+            /* Colunas: Menu (fixo), Jogo (flexível), Sidebar (fixo) */
+            grid-template-columns: 200px 1fr 250px;
+            /* Linhas: Conteúdo Principal (flexível), Chat (fixo) */
+            grid-template-rows: 1fr auto;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* --- COLUNA DA ESQUERDA (MENU) --- */
+        .menu-left {
+            grid-column: 1;
+            grid-row: 1;
+            background: #2a2a2a;
+            border-right: 2px solid #444;
+            padding: 15px;
+            overflow-y: auto; /* Scroll se tiver muitos botões */
+        }
+        .menu-left h1 {
+            font-size: 1.5em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .menu-button {
+            background-color: #333;
+            border: 2px solid red;
+            color: red;
+            font-weight: bold;
+            width: 100%;
+            height: 80px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.2s;
+        }
+        .menu-button:hover {
+            background-color: #444;
+        }
+
+        /* --- COLUNA CENTRAL (JOGO) --- */
+        .game-center {
+            grid-column: 2;
+            grid-row: 1;
+            padding: 0; /* Jogo ocupa todo o espaço */
+            overflow: hidden;
+            background: #000; /* Fundo preto caso o phaser demore a carregar */
+        }
+        /* Oculta o texto de boas-vindas, já que o jogo é o foco */
+        .game-center h1, .game-center p {
+            display: none; 
+        }
+        /* CSS do seu ficheiro original */
+        #game-container {
+            padding-top: 2%;
+            padding-left: 5%;
+            width: 90%;
+            height: 90%;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+        }
+
+        /* --- COLUNA DA DIREITA (SIDEBAR) --- */
+        .sidebar-right {
+            grid-column: 3;
+            grid-row: 1;
+            background: #2a2a2a;
+            border-left: 2px solid #444;
+            padding: 10px;
+            overflow-y: auto;
+        }
+        .sidebar-right h2 {
+            font-size: 1.2em;
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+        }
+
+        /* Grelha de Equipamentos/Status (Layout Tibia) */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr; /* 3 colunas */
+            gap: 5px; /* Espaço entre slots */
+            margin-bottom: 15px;
+        }
+
+        .equip-slot {
+            width: 100%; /* Ocupa a célula da grelha */
+            height: 0;
+            padding-bottom: 100%; /* Truque para manter o rácio 1:1 */
+            position: relative;
+            background-color: #333;
+            border: 2px solid #444;
+            border-radius: 5px;
+            cursor: help;
+            box-sizing: border-box;
+        }
+        .equip-slot-content {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px; /* Tamanho pequeno para nome de item */
+            color: #ddd;
+            font-weight: bold;
+            text-align: center;
+            padding: 4px;
+            word-break: break-word;
+        }
+        .equip-slot:hover {
+            border-color: #888;
+        }
+        
+        /* Barras de HP/Mana */
+        .status-bars {
+            margin-bottom: 15px;
+            padding: 5px;
+            background: #222;
+            border: 2px solid #444;
+            border-radius: 5px;
+        }
+        .bar-container {
+            width: 100%;
+            height: 15px;
+            background-color: #111;
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 2px;
+            box-sizing: border-box;
+        }
+        .bar-container.hp-bar { margin-bottom: 5px; }
+        
+        .hp-bar div {
+            height: 100%;
+            background-color: #ff0000; /* Vermelho */
+            border-radius: 3px;
+            transition: width 0.3s ease; /* Animação */
+        }
+        .mana-bar div {
+            height: 100%;
+            background-color: #0000ff; /* Azul */
+            border-radius: 3px;
+            transition: width 0.3s ease; /* Animação */
+        }
+
+        /* Grelha da Mochila */
+        .backpack-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 colunas */
+            gap: 5px;
+        }
+        .backpack-slot {
+             width: 100%;
+            height: 0;
+            padding-bottom: 100%; /* Rácio 1:1 */
+            background-color: #333;
+            border: 2px solid #444;
+            border-radius: 5px;
+            position: relative; /* Para posicionar o conteúdo */
+        }
+         .backpack-slot-content {
+             position: absolute;
+             top: 4px; left: 4px; right: 4px; bottom: 4px;
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             text-align: center;
+             font-size: 11px;
+             font-weight: bold;
+             color: #ddd;
+             word-break: break-word;
+        }
+        .backpack-slot:hover {
+            border-color: #888;
+        }
+
+        /* --- LINHA INFERIOR (CHAT) --- */
+        .chat-area {
+            grid-column: 1 / 4; /* Ocupa as 3 colunas */
+            grid-row: 2;
+            background: #2a2a2a;
+            border-top: 2px solid #444;
+            padding: 10px;
+        }
+        .chat-tabs {
+            margin-bottom: 5px;
+        }
+        .chat-tabs button {
+            background: #444;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .chat-tabs button.active {
+            background: #555;
+            border-bottom: 2px solid #007bff;
+        }
+        .chat-messages {
+            background-color: #1a1a1a;
+            height: 80px;
+            border: 1px solid #444;
+            padding: 5px;
+            overflow-y: scroll;
+            margin-bottom: 5px;
+        }
+        .chat-input-area {
+            display: flex;
+        }
+        .chat-input-area label {
+            margin-right: 10px;
+            flex-shrink: 0;
+            padding-top: 5px;
+            font-style: italic;
+            color: #aaa;
+        }
+        .chat-input-area input {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+        }
+        /* Botão de send do seu HTML */
+        .send-chat-msg {
+            background: #007bff;
+            border: none;
+            color: white;
+            padding: 0 10px;
+            margin-left: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .send-chat-msg:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        const accountInfoString = sessionStorage.getItem('accountInfo');
+        const selectedCharacterString = sessionStorage.getItem('selectedCharacter');
+        let selectedCharacter; 
+        if (!accountInfoString || !selectedCharacterString) {
+            console.error("Não foi possível encontrar accountInfo ou selectedCharacter na sessão.");
+            window.location.href = 'character-select.html';
+        } else {
+            try {
+                const accountInfo = JSON.parse(accountInfoString);
+                selectedCharacter = JSON.parse(selectedCharacterString);
+                console.log(`Entrando no mundo como ${selectedCharacter.name} (Conta: ${accountInfo.username})`);
+            } catch (e) {
+                console.error("Erro ao fazer parse dos dados da sessão:", e);
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+
+
+    <div class="main-layout">
+        
+        <nav class="menu-left">
+            <h1>menu</h1>
+            <button class="menu-button" onclick="alert('Funcionalidade ainda não implementada!')">qualquer<br>outra<br>opção que<br>possa ter</button>
+            <button class="menu-button" onclick="alert('Funcionalidade ainda não implementada!')">skills</button>
+            
+            <button class="menu-button" id="btn-atributos">atributos</button>
+            
+            <button class="menu-button" onclick="alert('Funcionalidade ainda não implementada!')">quests</button>
+        </nav>
+
+        <div class="game-center">
+            <div id="game-container"></div>
+            <h1 id="welcome-message">Carregando...</h1>
+            <p>Use as setas do teclado para se mover!</p>
+        </div>
+
+        <aside class="sidebar-right">
+            <h2>Equipamentos</h2>
+            
+            <div class="stats-grid">
+                <div class="equip-slot" title="colar/joia de pescoço/rosto">
+                    <div class="equip-slot-content" id="equip-slot-8"></div>
+                </div>
+                <div class="equip-slot" title="item de cabeça">
+                    <div class="equip-slot-content" id="equip-slot-1"></div>
+                </div>
+                <div class="equip-slot" title="capa/manto">
+                    <div class="equip-slot-content" id="equip-slot-5"></div>
+                </div>
+                <div class="equip-slot" title="mão principal">
+                    <div class="equip-slot-content" id="equip-slot-9"></div>
+                </div>
+                <div class="equip-slot" title="item de peitoral/core">
+                    <div class="equip-slot-content" id="equip-slot-2"></div>
+                </div>
+                <div class="equip-slot" title="mão secundária">
+                    <div class="equip-slot-content" id="equip-slot-6"></div>
+                </div>
+                <div class="equip-slot" title="local auxiliar 2 (para orbes, pederneira, flechas...)">
+                    <div class="equip-slot-content" id="equip-slot-0"></div>
+                </div>
+                <div class="equip-slot" title="item de pernas">
+                    <div class="equip-slot-content" id="equip-slot-3"></div>
+                </div>
+                <div class="equip-slot" title="local auxiliar 1 (para orbes, pederneira, flechas...)">
+                    <div class="equip-slot-content" id="equip-slot-7"></div>
+                </div>
+                <div class="equip-slot" title="item de pé">
+                    <div class="equip-slot-content" id="equip-slot-4"></div>
+                </div>
+            </div>
+
+            <div class="status-bars">
+                <div class="bar-container hp-bar">
+                    <div id="hp-bar-fill" style="width: 0%;"></div> 
+                </div>
+                <div class="bar-container mana-bar">
+                    <div id="mp-bar-fill" style="width: 0%;"></div> 
+                </div>
+            </div>
+
+            <h2>Mochila</h2>
+            <div class="backpack-grid" id="backpack-container">
+                </div>
+        </aside>
+
+        <div class="chat-area">
+            <div class="chat-tabs">
+                <button class="active">Mundo</button>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                </div>
+            <div class="chat-input-area">
+                <label>local para digitar o texto</label>
+                <input type="text" id="chat-input" placeholder="Digite sua mensagem...">
+                <button class="send-chat-msg" id="chat-send-button">send</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            scale: {
+                mode: Phaser.Scale.RESIZE,
+                parent: 'game-container',
+                width: '100%',
+                height: '100%'
+            },
+            pixelArt: true,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 }
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+        const game = new Phaser.Game(config);
+        let player;
+        let cursors;
+        function preload() {
+            const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+            graphics.fillStyle(0x228B22, 1);
+            graphics.fillRect(0, 0, 32, 32);
+            graphics.lineStyle(1, 0x006400, 0.5);
+            graphics.strokeRect(0, 0, 32, 32);
+            graphics.generateTexture('tile_grass', 32, 32);
+            const playerGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+            playerGraphics.fillStyle(0x0000ff, 1);
+            playerGraphics.fillRect(8, 8, 16, 16);
+            playerGraphics.generateTexture('player_sprite', 32, 32);
+            graphics.destroy();
+            playerGraphics.destroy();
+        }
+        function create() {
+            const mapData = [];
+            for (let y = 0; y < 50; y++) {
+                const row = [];
+                for (let x = 0; x < 50; x++) { row.push(0); }
+                mapData.push(row);
+            }
+            const map = this.make.tilemap({ data: mapData, tileWidth: 32, tileHeight: 32 });
+            const tileset = map.addTilesetImage('tile_grass');
+            const layer = map.createLayer(0, tileset, 0, 0);
+            player = this.physics.add.sprite(400, 300, 'player_sprite');
+            this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+            this.cameras.main.startFollow(player);
+            player.setCollideWorldBounds(true);
+            this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+            cursors = this.input.keyboard.createCursorKeys();
+        }
+        function update() {
+            player.setVelocity(0);
+            const speed = 200;
+            if (cursors.left.isDown) { player.setVelocityX(-speed); } 
+            else if (cursors.right.isDown) { player.setVelocityX(speed); }
+            if (cursors.up.isDown) { player.setVelocityY(-speed); } 
+            else if (cursors.down.isDown) { player.setVelocityY(speed); }
+        }
+    </script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            const socket = io('http://localhost:3000');
+
+            // --- Elementos da UI ---
+            const hpBarFill = document.getElementById('hp-bar-fill');
+            const mpBarFill = document.getElementById('mp-bar-fill');
+            const backpackContainer = document.getElementById('backpack-container');
+            const btnAtributos = document.getElementById('btn-atributos'); // Botão "atributos"
+            
+            const equipSlots = {
+                '8': document.getElementById('equip-slot-8'), '1': document.getElementById('equip-slot-1'),
+                '5': document.getElementById('equip-slot-5'), '9': document.getElementById('equip-slot-9'),
+                '2': document.getElementById('equip-slot-2'), '6': document.getElementById('equip-slot-6'),
+                '0': document.getElementById('equip-slot-0'), '3': document.getElementById('equip-slot-3'),
+                '7': document.getElementById('equip-slot-7'), '4G': document.getElementById('equip-slot-4')
+            };
+
+            // --- Eventos do Socket ---
+            
+            socket.on('connect', () => {
+                console.log('Conectado ao servidor do mundo!');
+                if (selectedCharacter && selectedCharacter.id) {
+                    socket.emit('player:join', { characterId: selectedCharacter.id });
+                } else {
+                    console.error("Não foi possível encontrar o ID do personagem para entrar no mundo.");
+                }
+            });
+
+            socket.on('disconnect', () => {
+                console.warn('Desconectado do servidor do mundo!');
+            });
+
+            // 3. Ouve as respostas do servidor e ATUALIZA A UI
+            
+            socket.on('player:updateStats', (stats) => {
+                console.log('Recebidos Stats:', stats);
+                if (hpBarFill) {
+                    const hpPercent = (stats.hp / stats.maxHp) * 100;
+                    hpBarFill.style.width = `${hpPercent}%`;
+                }
+                if (mpBarFill) {
+                    const mpPercent = (stats.mp / stats.maxMp) * 100;
+                    mpBarFill.style.width = `${mpPercent}%`;
+                }
+            });
+
+            socket.on('player:updateEquipment', (equipment) => {
+                console.log('Recebidos Equipamentos:', equipment);
+                
+                for (const slotContent of Object.values(equipSlots)) {
+                    if (slotContent) { slotContent.innerText = ''; }
+                }
+                
+                for (const [slotId, itemName] of Object.entries(equipment)) {
+                    const slotElement = equipSlots[slotId];
+                    if (slotElement) { slotElement.innerText = itemName; }
+                }
+            });
+
+            socket.on('player:updateInventory', (inventory) => {
+                console.log('Recebido Inventário:', inventory);
+                
+                if (backpackContainer) {
+                    backpackContainer.innerHTML = '';
+                    for(let i = 0; i < 12; i++) {
+                        const item = inventory[i]; 
+                        const slot = document.createElement('div');
+                        slot.className = 'backpack-slot';
+                        const content = document.createElement('div');
+                        content.className = 'backpack-slot-content';
+                        if (item) {
+                            content.innerText = `${item.name}\n(x${item.quantity})`;
+                        } else {
+                            content.innerText = '';
+                        }
+                        slot.appendChild(content);
+                        backpackContainer.appendChild(slot);
+                    }
+                }
+            });
+            
+            // --- FUNCIONALIDADE DO BOTÃO "ATRIBUTOS" ---
+            
+            // 1. Envia o pedido ao clicar no botão
+            btnAtributos.addEventListener('click', () => {
+                console.log('Pedindo atributos ao servidor...');
+                socket.emit('player:getAttributes');
+            });
+            
+            // 2. Ouve a resposta do servidor
+            socket.on('player:showAttributes', (stats) => {
+                if (stats) {
+                    // Formata a mensagem para o alert
+                    const message = `--- Atributos Base ---\n\n` +
+                                  `Força (str): ${stats.str}\n` +
+                                  `Inteligência (int): ${stats.int}\n` +
+                                  `Destreza (dex): ${stats.dex}\n` +
+                                  `Constituição (con): ${stats.con}`;
+                    alert(message);
+                } else {
+                    alert('Não foi possível buscar os atributos.');
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>
