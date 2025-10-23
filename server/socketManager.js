@@ -1,7 +1,12 @@
 import { registerLoginHandler } from './handlers/loginHandler.js';
-import { registerPlayerHandler } from './handlers/playerHandler.js'; // 1. IMPORTAR O NOVO HANDLER
-// No futuro, importaríamos outros handlers aqui:
-// import { registerChatHandler } from './handlers/chatHandler.js';
+import { registerPlayerHandler } from './handlers/playerHandler.js';
+import { registerCharacterHandler } from './handlers/characterHandler.js';
+import { registerAuthenticationHandler } from './handlers/authenticationHandler.js';
+import { registerMovementHandler } from './handlers/movementHandler.js';
+import { registerDisconnectHandler } from './handlers/disconnectHandler.js';
+import { registerChatHandler } from './handlers/chatHandler.js';
+// Importa APENAS a inicialização
+import { initializeVisibilityHandler } from './handlers/visibilityHandler.js';
 
 /**
  * Inicializa o gestor principal de conexões Socket.IO.
@@ -9,22 +14,20 @@ import { registerPlayerHandler } from './handlers/playerHandler.js'; // 1. IMPOR
  */
 export function initializeSocketManager(io) {
     
-    // Ouve o evento principal: um novo cliente conectou-se.
+    // Inicializa o Visibility Handler com a instância do io
+    initializeVisibilityHandler(io);
+
     io.on('connection', (socket) => {
         console.log(`[SocketManager] Novo cliente conectado: ${socket.id}`);
 
         // --- Registo de Handlers ---
-        // Aqui, "entregamos" o socket aos módulos responsáveis.
-        
-        // Regista os handlers de login (usados em login.html)
+        // Passamos 'io' apenas para os que precisam (chat)
+        registerAuthenticationHandler(socket);
         registerLoginHandler(socket);
-
-        // 2. REGISTAR O NOVO HANDLER (usado em index.html)
-        registerPlayerHandler(io, socket);
-
-        // --- Evento de Desconexão ---
-        socket.on('disconnect', (reason) => {
-            console.log(`[SocketManager] Cliente desconectado: ${socket.id}. Motivo: ${reason}`);
-        });
+        registerPlayerHandler(socket); // Não precisa mais de io
+        registerCharacterHandler(socket); // Não precisa mais de io
+        registerMovementHandler(socket); // Não precisa mais de io
+        registerChatHandler(io, socket); // Chat precisa para io.emit global
+        registerDisconnectHandler(socket); // Não precisa mais de io
     });
 }

@@ -1,5 +1,6 @@
-import { authenticateUser, getCharactersByAccountId } from '../services/authService.js';
+import { authenticateUser, getCharactersByAccountId, createAccount } from '../services/authService.js';
 import { loginSchema } from '../validators/loginSchema.js';
+import { registerSchema } from '../validators/resgisterSchema.js';
 
 export function registerLoginHandler(socket) {
     
@@ -37,6 +38,34 @@ export function registerLoginHandler(socket) {
             accountId: authResult.data.id,
             username: authResult.data.username,
             characters: characters 
+        });
+    });
+
+    // 2. ADICIONAR NOVO OUVINTE PARA REGISTO
+    socket.on('register:attempt', async (data) => {
+        console.log(`[LoginHandler] Recebido 'register:attempt' do socket ${socket.id}`);
+        
+        const { error, value } = registerSchema.validate(data);
+
+        if (error) {
+            console.warn(`[LoginHandler] Pacote de registo inválido de ${socket.id}: ${error.message}`);
+            socket.emit('register:fail', { message: 'Dados de registo inválidos.' });
+            return;
+        }
+
+        // 1. Tenta criar a conta usando o authService
+        const registerResult = await createAccount(value.username, value.password);
+
+        if (!registerResult.success) {
+            socket.emit('register:fail', { message: registerResult.error });
+            return;
+        }
+
+        console.log(`[LoginHandler] Usuário '${registerResult.data.username}' registado com sucesso.`);
+        
+        // 2. Envia sucesso de volta ao cliente
+        socket.emit('register:success', { 
+            message: 'Conta criada com sucesso!'
         });
     });
 }

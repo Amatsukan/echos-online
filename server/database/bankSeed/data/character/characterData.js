@@ -1,4 +1,4 @@
-import { EquipmentSlotEnum } from '../../../models/Enums/EquipmentSlots.js';
+import { EquipmentSlotEnum } from "../../../../models/enums/EquipmentSlots.js";
 
 export const characterData = [
     {

@@ -1,5 +1,5 @@
 
-import { InventoryItem } from '../../../models';
+import { InventoryItem } from '../../../models/index.js';
 import { characterData } from '../data/character/characterData.js';
 
 async function seedInventoryItem(charData, characters, items) {

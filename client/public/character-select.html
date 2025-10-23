@@ -121,10 +121,13 @@
             slotsContainer.querySelectorAll('.slot').forEach(slot => {
                 slot.addEventListener('click', function() {
                     
+                    // --- MODIFICAÇÃO AQUI ---
                     if (this.classList.contains('new-char')) {
-                        alert('A criação de personagens ainda não foi implementada!');
+                        //alert('A criação de personagens ainda não foi implementada!');
+                        window.location.href = '/character-create.html'; // LEVA PARA A NOVA PÁGINA
                         return;
                     }
+                    // --- FIM DA MODIFICAÇÃO ---
 
                     const selectedChar = JSON.parse(this.dataset.charInfo);
 

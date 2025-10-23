@@ -1,5 +1,5 @@
 
-import { Account } from '../../models';
+import { Account } from "../../models/index.js"
 
 async function seedAccount(accountData) {
     try {

@@ -1,5 +1,5 @@
 
-import { CharacterStats } from '../../../models';
+import { CharacterStats } from '../../../models/index.js';
 import { characterData } from '../data/character/characterData.js';
 
 async function seedCharacterStat(charData, characters) {

@@ -1,5 +1,5 @@
 
-import { Class } from '../../models';
+import { Class } from "../../models/index.js"
 
 async function seedClass(classData) {
     try {

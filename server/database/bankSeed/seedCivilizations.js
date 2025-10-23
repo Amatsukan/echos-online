@@ -1,4 +1,4 @@
-import { Civilization } from "../../models";
+import { Civilization } from "../../models/index.js"
 
 export default async function seed_civilizations()
 {

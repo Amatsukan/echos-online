@@ -1,7 +1,7 @@
 
-import { Item, Weapon, Armor, Consumable, Material } from '../../models';
-import { ItemTypeEnum } from '../../models/Enums/ItemTypes.js';
-import { EquipmentSlotEnum } from '../../models/Enums/EquipmentSlots.js';
+import { Item, Weapon, Armor, Consumable, Material } from "../../models/index.js"
+import { ItemTypeEnum } from '../../models/Enums/ItemTypes.js'
+import { EquipmentSlotEnum } from '../../models/Enums/EquipmentSlots.js'
 
 async function seedItem(itemData) {
     try {

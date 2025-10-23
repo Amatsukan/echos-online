@@ -7,7 +7,6 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <style>
-        /* [O SEU CSS ESTÁ CORRETO - SEM MUDANÇAS] */
         /* --- RESET BÁSICO --- */
         html, body {
             height: 100vh;
@@ -51,15 +50,19 @@
         }
         .menu-button {
             background-color: #333;
-            border: 2px solid red;
-            color: red;
+            border: 2px solid red; /* Mantive a borda vermelha, podes mudar */
+            color: red; /* Mantive a cor vermelha */
             font-weight: bold;
             width: 100%;
-            height: 80px;
-            margin-bottom: 20px;
+            height: 60px; /* Reduzi um pouco a altura para caber mais botões */
+            margin-bottom: 15px; /* Reduzi a margem */
             cursor: pointer;
-            font-size: 1.1em;
+            font-size: 1em; /* Reduzi um pouco a fonte */
             transition: background-color 0.2s;
+            display: flex; /* Para centralizar o texto verticalmente */
+            justify-content: center;
+            align-items: center;
+            text-align: center; /* Garante centralização horizontal */
         }
         .menu-button:hover {
             background-color: #444;
@@ -73,11 +76,6 @@
             overflow: hidden;
             background: #000; /* Fundo preto caso o phaser demore a carregar */
         }
-        /* Oculta o texto de boas-vindas, já que o jogo é o foco */
-        .game-center h1, .game-center p {
-            display: none; 
-        }
-        /* CSS do seu ficheiro original */
         #game-container {
             padding-top: 2%;
             padding-left: 5%;
@@ -222,6 +220,7 @@
             color: white;
             padding: 5px 10px;
             cursor: pointer;
+            border-bottom: 2px solid transparent; 
         }
         .chat-tabs button.active {
             background: #555;
@@ -234,7 +233,23 @@
             padding: 5px;
             overflow-y: scroll;
             margin-bottom: 5px;
+            font-size: 0.9em;
+            line-height: 1.4;
         }
+        .chat-messages p {
+            margin-bottom: 3px;
+            word-wrap: break-word;
+        }
+        .chat-messages p strong {
+            color: #00aaff; 
+        }
+        .chat-messages p.global-chat strong {
+            color: #ffb700; 
+        }
+        .chat-messages p.global-chat {
+            color: #f0f0f0; 
+        }
+
         .chat-input-area {
             display: flex;
         }
@@ -253,7 +268,6 @@
             background-color: #333;
             color: white;
         }
-        /* Botão de send do seu HTML */
         .send-chat-msg {
             background: #007bff;
             border: none;
@@ -271,15 +285,19 @@
 <body>
 
     <script>
+        // (Script de verificação do sessionStorage - Sem alterações)
         const accountInfoString = sessionStorage.getItem('accountInfo');
         const selectedCharacterString = sessionStorage.getItem('selectedCharacter');
+        
+        let accountInfo; 
         let selectedCharacter; 
+
         if (!accountInfoString || !selectedCharacterString) {
             console.error("Não foi possível encontrar accountInfo ou selectedCharacter na sessão.");
             window.location.href = 'character-select.html';
         } else {
             try {
-                const accountInfo = JSON.parse(accountInfoString);
+                accountInfo = JSON.parse(accountInfoString); 
                 selectedCharacter = JSON.parse(selectedCharacterString);
                 console.log(`Entrando no mundo como ${selectedCharacter.name} (Conta: ${accountInfo.username})`);
             } catch (e) {
@@ -294,19 +312,27 @@
         
         <nav class="menu-left">
             <h1>menu</h1>
-            <button class="menu-button" onclick="alert('Funcionalidade ainda não implementada!')">qualquer<br>outra<br>opção que<br>possa ter</button>
-            <button class="menu-button" onclick="alert('Funcionalidade ainda não implementada!')">skills</button>
+            <button class="menu-button" onclick="alert('Funcionalidade ainda não implementada!')">Skills</button>
+            <button class="menu-button" id="btn-atributos">Atributos</button>
+            <button class="menu-button" onclick="alert('Funcionalidade ainda não implementada!')">Quests</button>
             
-            <button class="menu-button" id="btn-atributos">atributos</button>
-            
-            <button class="menu-button" onclick="alert('Funcionalidade ainda não implementada!')">quests</button>
+            <button 
+                class="menu-button" 
+                onclick="window.location.href='/character-select.html'"
+                style="border-color: yellow; color: yellow;"> 
+                Seleção de Char
+            </button>
+            <button 
+                class="menu-button" 
+                onclick="sessionStorage.removeItem('accountInfo'); sessionStorage.removeItem('selectedCharacter'); window.location.href='/login.html';"
+                style="border-color: orange; color: orange;"> 
+                Logoff
+            </button>
         </nav>
 
         <div class="game-center">
             <div id="game-container"></div>
-            <h1 id="welcome-message">Carregando...</h1>
-            <p>Use as setas do teclado para se mover!</p>
-        </div>
+            </div>
 
         <aside class="sidebar-right">
             <h2>Equipamentos</h2>
@@ -360,12 +386,13 @@
 
         <div class="chat-area">
             <div class="chat-tabs">
-                <button class="active">Mundo</button>
+                <button id="chat-tab-local" class="active">Local</button>
+                <button id="chat-tab-global">Global</button>
             </div>
             <div class="chat-messages" id="chat-messages">
                 </div>
             <div class="chat-input-area">
-                <label>local para digitar o texto</label>
+                <label id="chat-label">Local:</label> 
                 <input type="text" id="chat-input" placeholder="Digite sua mensagem...">
                 <button class="send-chat-msg" id="chat-send-button">send</button>
             </div>
@@ -374,6 +401,22 @@
 
 
     <script>
+        let TILE_SIZE = 32; 
+        
+        const MOVEMENT_COOLDOWN_MS = 250;
+        const SPEECH_BUBBLE_DURATION = 5000; 
+        
+        const gameContext = {
+            player: null,
+            otherPlayers: new Map(), 
+            socket: null,
+            map: null,
+            tileSize: 32,
+            isMoving: false,       
+            movementTask: null,
+            speechBubbles: new Map()
+        };
+
         const config = {
             type: Phaser.AUTO,
             scale: {
@@ -395,155 +438,490 @@
                 update: update
             }
         };
+
         const game = new Phaser.Game(config);
-        let player;
-        let cursors;
+
         function preload() {
+            // Textura da Relva (Grama)
             const graphics = this.make.graphics({ x: 0, y: 0, add: false });
             graphics.fillStyle(0x228B22, 1);
             graphics.fillRect(0, 0, 32, 32);
             graphics.lineStyle(1, 0x006400, 0.5);
             graphics.strokeRect(0, 0, 32, 32);
             graphics.generateTexture('tile_grass', 32, 32);
+            
+            // Textura do Jogador (Azul)
             const playerGraphics = this.make.graphics({ x: 0, y: 0, add: false });
             playerGraphics.fillStyle(0x0000ff, 1);
             playerGraphics.fillRect(8, 8, 16, 16);
             playerGraphics.generateTexture('player_sprite', 32, 32);
+            
+            // Textura para os outros jogadores (Vermelho)
+            const otherPlayerGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+            otherPlayerGraphics.fillStyle(0xff0000, 1); // Vermelho
+            otherPlayerGraphics.fillRect(8, 8, 16, 16);
+            otherPlayerGraphics.generateTexture('other_player_sprite', 32, 32);
+            
             graphics.destroy();
             playerGraphics.destroy();
+            otherPlayerGraphics.destroy();
         }
+
         function create() {
-            const mapData = [];
-            for (let y = 0; y < 50; y++) {
-                const row = [];
-                for (let x = 0; x < 50; x++) { row.push(0); }
-                mapData.push(row);
-            }
-            const map = this.make.tilemap({ data: mapData, tileWidth: 32, tileHeight: 32 });
-            const tileset = map.addTilesetImage('tile_grass');
-            const layer = map.createLayer(0, tileset, 0, 0);
-            player = this.physics.add.sprite(400, 300, 'player_sprite');
-            this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-            this.cameras.main.startFollow(player);
-            player.setCollideWorldBounds(true);
-            this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-            cursors = this.input.keyboard.createCursorKeys();
+            gameContext.socket = io('http://localhost:3000');
+            gameContext.scene = this;
+            gameContext.isMoving = false; 
+
+            // --- Ouvintes de Socket ---
+            gameContext.socket.on('map:load', (data) => {
+                console.log('Recebendo mapa do servidor...');
+                 // DEBUG: Vê como são os dados recebidos
+                // console.log('Dados do Mapa:', data.mapData); 
+                
+                gameContext.tileSize = data.tileSize;
+                TILE_SIZE = data.tileSize;
+
+                // 1. Cria o mapa a partir dos dados recebidos
+                const map = this.make.tilemap({ data: data.mapData, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
+                
+                // 2. Adiciona a imagem 'tile_grass' (definida no preload) como um tileset para o mapa.
+                //    >>> GARANTE QUE O PRIMEIRO 'tile_grass' AQUI É IDÊNTICO AO DO preload() <<<
+                const tileset = map.addTilesetImage('tile_grass', 'tile_grass'); 
+
+                // --- (NOVO) VERIFICAÇÃO DO TILESET ---
+                if (!tileset) {
+                    console.error("### ERRO CRÍTICO: Falha ao adicionar o tileset 'tile_grass'. Verifica se o nome da textura ('tile_grass') no preload() está correto e se a textura foi gerada sem erros! ###");
+                    return; 
+                }
+                console.log("Tileset 'tile_grass' adicionado com sucesso.");
+                // --- FIM DA VERIFICAÇÃO ---
+
+                // 3. Cria a camada visual.
+                const layer = map.createLayer(0, tileset, 0, 0); 
+
+                 if (!layer) {
+                    console.error("### ERRO CRÍTICO: Falha ao criar a camada do mapa (createLayer falhou). Isto geralmente acontece se o tileset ('tile_grass') não foi carregado corretamente. Verifica os logs acima. ###");
+                    return;
+                 }
+                 console.log("Camada do mapa criada com sucesso.");
+                
+                gameContext.map = map; 
+
+                // Ajusta os limites
+                this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+                this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+            });
+            gameContext.socket.on('player:spawn', (data) => {
+                // DEBUG: Verifica os dados recebidos para o spawn
+                console.log('Dados recebidos para player:spawn:', data); 
+                if (typeof data.x === 'undefined' || typeof data.y === 'undefined' || data.x === null || data.y === null) {
+                     console.error("### ERRO: Dados de spawn inválidos recebidos do servidor! x ou y estão undefined ou null. ###", data);
+                     // Poderíamos tentar usar uma posição padrão segura aqui, como (24, 24) * TILE_SIZE
+                     // const safeSpawnX = 24 * TILE_SIZE + (TILE_SIZE / 2);
+                     // const safeSpawnY = 24 * TILE_SIZE + (TILE_SIZE / 2);
+                     // Por agora, apenas logamos e retornamos para evitar mais erros.
+                     return; 
+                }
+
+                console.log(`Spawning em ${data.x}, ${data.y}`);
+                const spawnX = (data.x * TILE_SIZE) + (TILE_SIZE / 2);
+                const spawnY = (data.y * TILE_SIZE) + (TILE_SIZE / 2);
+                const player = this.physics.add.sprite(spawnX, spawnY, 'player_sprite');
+                player.setCollideWorldBounds(true);
+                this.cameras.main.startFollow(player);
+                gameContext.player = player; 
+            });
+            gameContext.socket.on('player:move:success', (data) => {
+                if (!gameContext.player) return;
+                const newX = (data.x * TILE_SIZE) + (TILE_SIZE / 2);
+                const newY = (data.y * TILE_SIZE) + (TILE_SIZE / 2);
+                gameContext.player.setPosition(newX, newY);
+            });
+            gameContext.socket.on('player:move:fail', (data) => {
+                console.warn(`Movimento falhou para ${data.x}, ${data.y}. Obstáculo.`);
+                gameContext.movementTask = null;
+            });
+            gameContext.socket.on('player:new', (data) => {
+                 // DEBUG: Verifica os dados recebidos para o novo jogador
+                console.log('Dados recebidos para player:new:', data);
+                if (typeof data.x === 'undefined' || typeof data.y === 'undefined' || data.x === null || data.y === null) {
+                    console.error("### ERRO: Dados inválidos recebidos para player:new! x ou y estão undefined ou null. ###", data);
+                    return;
+                }
+                console.log(`Novo jogador entrou: ${data.characterId} em ${data.x}, ${data.y}`);
+                const spawnX = (data.x * TILE_SIZE) + (TILE_SIZE / 2);
+                const spawnY = (data.y * TILE_SIZE) + (TILE_SIZE / 2);
+                const otherPlayer = this.add.sprite(spawnX, spawnY, 'other_player_sprite');
+                gameContext.otherPlayers.set(data.characterId, otherPlayer);
+            });
+            gameContext.socket.on('player:moved', (data) => {
+                const playerToMove = gameContext.otherPlayers.get(data.characterId);
+                if (playerToMove) {
+                    if (typeof data.x === 'number' && typeof data.y === 'number') {
+                        const newX = (data.x * TILE_SIZE) + (TILE_SIZE / 2);
+                        const newY = (data.y * TILE_SIZE) + (TILE_SIZE / 2);
+                        playerToMove.setPosition(newX, newY);
+                    } else {
+                        console.warn('Dados inválidos recebidos para player:moved', data);
+                    }
+                }
+            });
+            gameContext.socket.on('player:quit', (data) => {
+                console.log(`Jogador saiu: ${data.characterId}`);
+                destroySpeechBubble(data.characterId);
+                const playerToDestroy = gameContext.otherPlayers.get(data.characterId);
+                if (playerToDestroy) {
+                    playerToDestroy.destroy();
+                    gameContext.otherPlayers.delete(data.characterId);
+                }
+            });
+            gameContext.socket.on('player:spoke', (data) => {
+                createSpeechBubble(data.characterId, data.message);
+            });
+
+
+            // --- INPUTS ---
+            this.wasd = this.input.keyboard.addKeys('W,A,S,D');
+            this.input.on('pointerdown', (pointer) => {
+                if (pointer.button !== 0) return; 
+                const worldPoint = pointer.positionToCamera(this.cameras.main);
+                const targetTileX = Math.floor(worldPoint.x / TILE_SIZE);
+                const targetTileY = Math.floor(worldPoint.y / TILE_SIZE);
+                console.log(`Nova tarefa de movimento: ir para [${targetTileX}, ${targetTileY}]`);
+                gameContext.movementTask = { x: targetTileX, y: targetTileY };
+            });
+            const chatInput = document.getElementById('chat-input');
+            let isChatFocused = false; 
+            chatInput.addEventListener('focus', () => {
+                console.log('Chat Focado - Teclado Phaser desativado');
+                isChatFocused = true;
+                this.input.keyboard.disableGlobalCapture(); 
+            });
+            chatInput.addEventListener('blur', () => {
+                console.log('Chat Perdeu Foco - Teclado Phaser ativado');
+                isChatFocused = false;
+                this.input.keyboard.enableGlobalCapture(); 
+            });
+            this.input.keyboard.on('keydown-SPACE', (event) => {
+                if (!isChatFocused) { 
+                    event.preventDefault(); 
+                    chatInput.focus();      
+                }
+            });
         }
+
+        // --- Funções de Balão de Fala ---
+        function getPlayerSprite(characterId) {
+            if (selectedCharacter && selectedCharacter.id === characterId) {
+                return gameContext.player;
+            }
+            return gameContext.otherPlayers.get(characterId);
+        }
+        function destroySpeechBubble(characterId) {
+            if (gameContext.speechBubbles.has(characterId)) {
+                gameContext.speechBubbles.get(characterId).destroy();
+                gameContext.speechBubbles.delete(characterId);
+            }
+        }
+        function createSpeechBubble(characterId, message) {
+            destroySpeechBubble(characterId);
+            const playerSprite = getPlayerSprite(characterId);
+            if (!playerSprite) return; 
+            const text = gameContext.scene.add.text(
+                playerSprite.x, 
+                playerSprite.y - TILE_SIZE, 
+                message, 
+                {
+                    fontFamily: 'sans-serif', fontSize: '12px', color: '#000000',
+                    backgroundColor: '#ffffff', padding: { x: 5, y: 3 },
+                    wordWrap: { width: 150 } 
+                }
+            );
+            text.setOrigin(0.5, 1); 
+            gameContext.speechBubbles.set(characterId, text);
+            gameContext.scene.time.delayedCall(SPEECH_BUBBLE_DURATION, () => {
+                destroySpeechBubble(characterId);
+            });
+        }
+
+
+        // --- FUNÇÃO UPDATE ---
         function update() {
-            player.setVelocity(0);
-            const speed = 200;
-            if (cursors.left.isDown) { player.setVelocityX(-speed); } 
-            else if (cursors.right.isDown) { player.setVelocityX(speed); }
-            if (cursors.up.isDown) { player.setVelocityY(-speed); } 
-            else if (cursors.down.isDown) { player.setVelocityY(speed); }
+            if (!gameContext.player || !gameContext.socket || gameContext.isMoving) {
+                return; 
+            }
+            const currentTileX = Math.floor(gameContext.player.x / TILE_SIZE);
+            const currentTileY = Math.floor(gameContext.player.y / TILE_SIZE);
+            let targetX = currentTileX;
+            let targetY = currentTileY;
+            let moveAttempted = false; 
+            if (Phaser.Input.Keyboard.JustDown(this.wasd.W)) {
+                gameContext.movementTask = null; 
+                targetY = currentTileY - 1;
+                moveAttempted = true;
+            } else if (Phaser.Input.Keyboard.JustDown(this.wasd.S)) {
+                gameContext.movementTask = null;
+                targetY = currentTileY + 1;
+                moveAttempted = true;
+            } else if (Phaser.Input.Keyboard.JustDown(this.wasd.A)) {
+                gameContext.movementTask = null;
+                targetX = currentTileX - 1;
+                moveAttempted = true;
+            } else if (Phaser.Input.Keyboard.JustDown(this.wasd.D)) {
+                gameContext.movementTask = null;
+                targetX = currentTileX + 1;
+                moveAttempted = true;
+            } 
+            else if (gameContext.movementTask) {
+                const taskTargetX = gameContext.movementTask.x;
+                const taskTargetY = gameContext.movementTask.y;
+                if (currentTileX === taskTargetX && currentTileY === taskTargetY) {
+                    gameContext.movementTask = null;
+                } else {
+                    if (currentTileX < taskTargetX) targetX++;
+                    else if (currentTileX > taskTargetX) targetX--;
+                    else if (currentTileY < taskTargetY) targetY++;
+                    else if (currentTileY > taskTargetY) targetY--;
+                    moveAttempted = true;
+                }
+            }
+            if (moveAttempted) {
+                gameContext.isMoving = true; 
+                setTimeout(() => {
+                    gameContext.isMoving = false; 
+                }, MOVEMENT_COOLDOWN_MS);
+                gameContext.socket.emit('player:move:attempt', { x: targetX, y: targetY });
+            }
+            gameContext.speechBubbles.forEach((bubble, characterId) => {
+                const playerSprite = getPlayerSprite(characterId);
+                if (playerSprite) {
+                    bubble.setPosition(playerSprite.x, playerSprite.y - TILE_SIZE);
+                }
+            });
         }
     </script>
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             
-            const socket = io('http://localhost:3000');
-
-            // --- Elementos da UI ---
+            // --- Elementos da UI (Geral) ---
             const hpBarFill = document.getElementById('hp-bar-fill');
             const mpBarFill = document.getElementById('mp-bar-fill');
             const backpackContainer = document.getElementById('backpack-container');
-            const btnAtributos = document.getElementById('btn-atributos'); // Botão "atributos"
+            const btnAtributos = document.getElementById('btn-atributos'); 
             
+            // --- Elementos da UI (Chat) ---
+            const chatMessages = document.getElementById('chat-messages');
+            const chatInput = document.getElementById('chat-input');
+            const chatSendButton = document.getElementById('chat-send-button');
+            const chatTabLocal = document.getElementById('chat-tab-local');
+            const chatTabGlobal = document.getElementById('chat-tab-global');
+            const chatLabel = document.getElementById('chat-label');
+
+            let currentChatChannel = 'local'; // Padrão é 'local'
+
             const equipSlots = {
                 '8': document.getElementById('equip-slot-8'), '1': document.getElementById('equip-slot-1'),
                 '5': document.getElementById('equip-slot-5'), '9': document.getElementById('equip-slot-9'),
                 '2': document.getElementById('equip-slot-2'), '6': document.getElementById('equip-slot-6'),
                 '0': document.getElementById('equip-slot-0'), '3': document.getElementById('equip-slot-3'),
-                '7': document.getElementById('equip-slot-7'), '4G': document.getElementById('equip-slot-4')
+                '7': document.getElementById('equip-slot-7'), 
+                '4': document.getElementById('equip-slot-4')
             };
 
-            // --- Eventos do Socket ---
-            
-            socket.on('connect', () => {
-                console.log('Conectado ao servidor do mundo!');
-                if (selectedCharacter && selectedCharacter.id) {
-                    socket.emit('player:join', { characterId: selectedCharacter.id });
-                } else {
-                    console.error("Não foi possível encontrar o ID do personagem para entrar no mundo.");
-                }
-            });
-
-            socket.on('disconnect', () => {
-                console.warn('Desconectado do servidor do mundo!');
-            });
-
-            // 3. Ouve as respostas do servidor e ATUALIZA A UI
-            
-            socket.on('player:updateStats', (stats) => {
-                console.log('Recebidos Stats:', stats);
-                if (hpBarFill) {
-                    const hpPercent = (stats.hp / stats.maxHp) * 100;
-                    hpBarFill.style.width = `${hpPercent}%`;
-                }
-                if (mpBarFill) {
-                    const mpPercent = (stats.mp / stats.maxMp) * 100;
-                    mpBarFill.style.width = `${mpPercent}%`;
-                }
-            });
-
-            socket.on('player:updateEquipment', (equipment) => {
-                console.log('Recebidos Equipamentos:', equipment);
+            // Função para ligar os eventos da UI ao socket
+            function setupSocketUI(socket) {
                 
-                for (const slotContent of Object.values(equipSlots)) {
-                    if (slotContent) { slotContent.innerText = ''; }
-                }
-                
-                for (const [slotId, itemName] of Object.entries(equipment)) {
-                    const slotElement = equipSlots[slotId];
-                    if (slotElement) { slotElement.innerText = itemName; }
-                }
-            });
+                // --- Eventos de Conexão (Geral) ---
+                socket.on('connect', () => {
+                    console.log('Conectado ao servidor do mundo!');
+                    
+                    if (accountInfo && accountInfo.accountId) {
+                        socket.emit('client:authenticate', { accountId: accountInfo.accountId });
+                    }
+                    
+                    if (selectedCharacter && selectedCharacter.id) {
+                        socket.emit('player:join', { characterId: selectedCharacter.id });
+                    } else {
+                        console.error("Não foi possível encontrar o ID do personagem para entrar no mundo.");
+                    }
+                });
 
-            socket.on('player:updateInventory', (inventory) => {
-                console.log('Recebido Inventário:', inventory);
+                socket.on('disconnect', () => {
+                    console.warn('Desconectado do servidor do mundo!');
+                });
+
+                // --- Eventos de UI (Stats, Equip, Inv) ---
                 
-                if (backpackContainer) {
-                    backpackContainer.innerHTML = '';
-                    for(let i = 0; i < 12; i++) {
-                        const item = inventory[i]; 
-                        const slot = document.createElement('div');
-                        slot.className = 'backpack-slot';
-                        const content = document.createElement('div');
-                        content.className = 'backpack-slot-content';
-                        if (item) {
-                            content.innerText = `${item.name}\n(x${item.quantity})`;
-                        } else {
-                            content.innerText = '';
+                socket.on('player:updateStats', (stats) => {
+                    console.log('Recebidos Stats:', stats);
+                    if (hpBarFill && stats && typeof stats.hp === 'number' && typeof stats.maxHp === 'number' && stats.maxHp > 0) {
+                        const hpPercent = Math.max(0, Math.min(100, (stats.hp / stats.maxHp) * 100)); // Garante 0-100
+                        hpBarFill.style.width = `${hpPercent}%`;
+                    }
+                    if (mpBarFill && stats && typeof stats.mp === 'number' && typeof stats.maxMp === 'number' && stats.maxMp > 0) {
+                        const mpPercent = Math.max(0, Math.min(100, (stats.mp / stats.maxMp) * 100)); // Garante 0-100
+                        mpBarFill.style.width = `${mpPercent}%`;
+                    }
+                });
+
+                socket.on('player:updateEquipment', (equipment) => {
+                     console.log('Recebidos Equipamentos:', equipment);
+                     if (equipment) { // Verifica se equipment não é null/undefined
+                        // Limpa todos os slots primeiro
+                        for (const slotContent of Object.values(equipSlots)) {
+                            if (slotContent) { slotContent.innerText = ''; }
                         }
-                        slot.appendChild(content);
-                        backpackContainer.appendChild(slot);
+                        // Preenche os slots com os itens recebidos
+                        for (const [slotId, itemName] of Object.entries(equipment)) {
+                            const slotElement = equipSlots[slotId];
+                            if (slotElement) { 
+                                slotElement.innerText = itemName || ''; // Usa string vazia se itemName for null/undefined
+                            }
+                        }
+                     }
+                });
+
+                socket.on('player:updateInventory', (inventory) => {
+                    console.log('Recebido Inventário:', inventory);
+                    if (backpackContainer && Array.isArray(inventory)) { // Verifica se é um array
+                        backpackContainer.innerHTML = '';
+                        // Garante que temos sempre 12 slots, mesmo que o array recebido seja menor
+                        for(let i = 0; i < 12; i++) { 
+                            const item = inventory[i]; // Pode ser null ou undefined se o array for menor que 12
+                            const slot = document.createElement('div');
+                            slot.className = 'backpack-slot';
+                            const content = document.createElement('div');
+                            content.className = 'backpack-slot-content';
+                            // Verifica se o item existe e tem as propriedades necessárias
+                            if (item && item.name && typeof item.quantity === 'number') { 
+                                content.innerText = `${item.name}\n(x${item.quantity})`;
+                            } else {
+                                content.innerText = ''; // Slot vazio
+                            }
+                            slot.appendChild(content);
+                            backpackContainer.appendChild(slot);
+                        }
+                    } else {
+                         console.warn("Recebido inventário inválido ou elemento backpackContainer não encontrado.");
+                    }
+                });
+                
+                // --- Botão "Atributos" ---
+                
+                if (btnAtributos) {
+                    btnAtributos.addEventListener('click', () => {
+                        console.log('Pedindo atributos ao servidor...');
+                        socket.emit('player:getAttributes');
+                    });
+                } else {
+                    console.warn('O elemento "btn-atributos" não foi encontrado no HTML.');
+                }
+                
+                socket.on('player:showAttributes', (stats) => {
+                    if (stats && typeof stats.str === 'number') { // Verifica se stats é válido
+                        const message = `--- Atributos Base ---\n\n` +
+                                      `Força (str): ${stats.str}\n` +
+                                      `Inteligência (int): ${stats.int}\n` +
+                                      `Destreza (dex): ${stats.dex}\n` +
+                                      `Constituição (con): ${stats.con}`;
+                        alert(message);
+                    } else {
+                        alert('Não foi possível buscar os atributos ou os dados são inválidos.');
+                    }
+                });
+
+                // --- LÓGICA DO CHAT ---
+
+                // Função para adicionar uma mensagem ao painel
+                function addChatMessage(data) {
+                    // Verifica se os dados recebidos são válidos
+                    if (!data || !data.senderName || !data.message || !data.channel) {
+                        console.warn("Recebida mensagem de chat inválida:", data);
+                        return;
+                    }
+
+                    const { senderName, message, channel } = data;
+                    const p = document.createElement('p');
+                    
+                    if (channel === 'global') {
+                        p.className = 'global-chat';
+                        p.innerHTML = `[Global] <strong>${senderName}:</strong> ${message}`;
+                    } else {
+                        p.innerHTML = `<strong>${senderName}:</strong> ${message}`;
+                    }
+                    
+                    // Verifica se chatMessages existe antes de adicionar
+                    if(chatMessages) {
+                        chatMessages.appendChild(p);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
                     }
                 }
-            });
-            
-            // --- FUNCIONALIDADE DO BOTÃO "ATRIBUTOS" ---
-            
-            // 1. Envia o pedido ao clicar no botão
-            btnAtributos.addEventListener('click', () => {
-                console.log('Pedindo atributos ao servidor...');
-                socket.emit('player:getAttributes');
-            });
-            
-            // 2. Ouve a resposta do servidor
-            socket.on('player:showAttributes', (stats) => {
-                if (stats) {
-                    // Formata a mensagem para o alert
-                    const message = `--- Atributos Base ---\n\n` +
-                                  `Força (str): ${stats.str}\n` +
-                                  `Inteligência (int): ${stats.int}\n` +
-                                  `Destreza (dex): ${stats.dex}\n` +
-                                  `Constituição (con): ${stats.con}`;
-                    alert(message);
-                } else {
-                    alert('Não foi possível buscar os atributos.');
+
+                // Função para enviar a mensagem
+                function sendChatMessage() {
+                    if(!chatInput) return; // Verifica se o input existe
+
+                    const message = chatInput.value.trim();
+                    if (message.length > 0) {
+                        socket.emit('chat:send', { 
+                            message: message,
+                            channel: currentChatChannel 
+                        });
+                        chatInput.value = '';
+                    }
                 }
-            });
+
+                // 1. Ouve as mensagens recebidas do servidor
+                socket.on('chat:receive', (data) => {
+                    addChatMessage(data);
+                });
+
+                // 2. Envia ao clicar no botão "send" (Verifica se o botão existe)
+                if (chatSendButton) {
+                    chatSendButton.addEventListener('click', sendChatMessage);
+                }
+
+                // 3. Envia ao pressionar "Enter" no input (Verifica se o input existe)
+                if (chatInput) {
+                    chatInput.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault(); 
+                            sendChatMessage();
+                        }
+                    });
+                }
+
+                // 4. Lógica de troca de Abas (Verifica se as abas existem)
+                if (chatTabLocal && chatTabGlobal && chatLabel) {
+                    chatTabLocal.addEventListener('click', () => {
+                        currentChatChannel = 'local';
+                        chatTabLocal.classList.add('active');
+                        chatTabGlobal.classList.remove('active');
+                        chatLabel.textContent = 'Local:';
+                    });
+
+                    chatTabGlobal.addEventListener('click', () => {
+                        currentChatChannel = 'global';
+                        chatTabGlobal.classList.add('active');
+                        chatTabLocal.classList.remove('active');
+                        chatLabel.textContent = 'Global:';
+                    });
+                }
+            }
+
+            // --- Ponto de Início da UI ---
+            const trySetupUI = () => {
+                // Verifica se o socket do Phaser já está disponível
+                if (gameContext.socket) {
+                    setupSocketUI(gameContext.socket);
+                } else {
+                    // Se ainda não estiver, tenta novamente em 100ms
+                    setTimeout(trySetupUI, 100); 
+                }
+            };
+            // Inicia a primeira tentativa
+            trySetupUI();
 
         });
     </script>

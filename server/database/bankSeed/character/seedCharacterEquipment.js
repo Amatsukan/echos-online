@@ -1,5 +1,5 @@
 
-import { CharacterEquipment } from '../../../models';
+import { CharacterEquipment } from '../../../models/index.js';
 import { characterData } from '../data/character/characterData.js';
 
 async function seedCharacterEquipment(charData, characters, items) {

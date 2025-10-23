@@ -1,4 +1,3 @@
-
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../../database/database.js';
 
@@ -28,7 +27,21 @@ export const Character = sequelize.define('Character', {
     maxMp: {
         type: DataTypes.INTEGER,
         defaultValue: 5
+    },
+
+    // --- MUDANÇA NA PERSISTÊNCIA DE POSIÇÃO ---
+    x: {
+        type: DataTypes.INTEGER,
+        // O spawn (25, 25) está agora DENTRO do buraco.
+        // Mudamos para (24, 24) como novo ponto de spawn padrão.
+        defaultValue: 24 
+    },
+    y: {
+        type: DataTypes.INTEGER,
+        defaultValue: 24
     }
+    // --- FIM DAS MUDANÇAS ---
+
     // Os campos 'stats', 'equipment' e 'inventory' (JSON) foram REMOVIDOS.
     // Eles serão substituídos por associações hasMany().
 }, {
