@@ -2,70 +2,81 @@ import { authenticateUser, getCharactersByAccountId, createAccount } from '../se
 import { loginSchema } from '../validators/loginSchema.js';
 import { registerSchema } from '../validators/resgisterSchema.js';
 
+const validateAndAuthenticate = async (username, password) => {
+    return await authenticateUser(username, password);
+};
+
+const validateAndRegister = async (username, password) => {
+    return await createAccount(username, password);
+};
+
+const sendLoginSuccess = (socket, authResult, characters) => {
+    socket.emit('login:success', {
+        accountId: authResult.data.id,
+        username: authResult.data.username,
+        characters: characters,
+    });
+};
+
+const sendLoginFailure = (socket, message) => {
+    socket.emit('login:fail', { message });
+};
+
+const sendRegisterSuccess = (socket, message) => {
+    socket.emit('register:success', { message });
+};
+
+const sendRegisterFailure = (socket, message) => {
+    socket.emit('register:fail', { message });
+};
+
+const handleLoginAttempt = async (socket, data) => {
+    console.log(`[LoginHandler] Recebido 'login:attempt' do socket ${socket.id}`);
+    const { error, value } = loginSchema.validate(data);
+
+    if (error) {
+        console.warn(`[LoginHandler] Pacote inválido de ${socket.id}: ${error.message}`);
+        sendLoginFailure(socket, 'Dados de login inválidos.');
+        return;
+    }
+
+    const authResult = await validateAndAuthenticate(value.username, value.password);
+
+    if (!authResult.success) {
+        sendLoginFailure(socket, authResult.error);
+        return;
+    }
+
+    socket.data.accountId = authResult.data.id;
+    socket.data.username = authResult.data.username;
+
+    const characters = await getCharactersByAccountId(authResult.data.id);
+    console.log(`[LoginHandler] Usuário '${socket.data.username}' logado com sucesso.`);
+    sendLoginSuccess(socket, authResult, characters);
+};
+
+const handleRegisterAttempt = async (socket, data) => {
+    console.log(`[LoginHandler] Recebido 'register:attempt' do socket ${socket.id}`);
+    const { error, value } = registerSchema.validate(data);
+
+    if (error) {
+        console.warn(`[LoginHandler] Pacote de registo inválido de ${socket.id}: ${error.message}`);
+        sendRegisterFailure(socket, 'Dados de registo inválidos.');
+        return;
+    }
+
+    const registerResult = await validateAndRegister(value.username, value.password);
+
+    if (!registerResult.success) {
+        sendRegisterFailure(socket, registerResult.error);
+        return;
+    }
+
+    console.log(`[LoginHandler] Usuário '${registerResult.data.username}' registado com sucesso.`);
+    sendRegisterSuccess(socket, 'Conta criada com sucesso!');
+};
+
 export function registerLoginHandler(socket) {
-    
-    socket.on('login:attempt', async (data) => {
-        console.log(`[LoginHandler] Recebido 'login:attempt' do socket ${socket.id}`);
-        
-        const { error, value } = loginSchema.validate(data);
-
-        if (error) {
-            console.warn(`[LoginHandler] Pacote inválido de ${socket.id}: ${error.message}`);
-            socket.emit('login:fail', { message: 'Dados de login inválidos.' });
-            return;
-        }
-
-        // 1. Autentica usando o novo authService (que usa Account)
-        const authResult = await authenticateUser(value.username, value.password);
-
-        if (!authResult.success) {
-            socket.emit('login:fail', { message: authResult.error });
-            return;
-        }
-        
-        socket.data.accountId = authResult.data.id;
-        socket.data.username = authResult.data.username;
-
-        // 2. Busca personagens (que agora inclui o nome da Classe)
-        const characters = await getCharactersByAccountId(authResult.data.id);
-
-        console.log(`[LoginHandler] Usuário '${socket.data.username}' logado com sucesso.`);
-        
-        // 3. Envia os dados para o character-select.html
-        // O formato de 'characters' [{id, name, level, class}] 
-        // já é o esperado pelo cliente.
-        socket.emit('login:success', { 
-            accountId: authResult.data.id,
-            username: authResult.data.username,
-            characters: characters 
-        });
-    });
-
-    // 2. ADICIONAR NOVO OUVINTE PARA REGISTO
-    socket.on('register:attempt', async (data) => {
-        console.log(`[LoginHandler] Recebido 'register:attempt' do socket ${socket.id}`);
-        
-        const { error, value } = registerSchema.validate(data);
-
-        if (error) {
-            console.warn(`[LoginHandler] Pacote de registo inválido de ${socket.id}: ${error.message}`);
-            socket.emit('register:fail', { message: 'Dados de registo inválidos.' });
-            return;
-        }
-
-        // 1. Tenta criar a conta usando o authService
-        const registerResult = await createAccount(value.username, value.password);
-
-        if (!registerResult.success) {
-            socket.emit('register:fail', { message: registerResult.error });
-            return;
-        }
-
-        console.log(`[LoginHandler] Usuário '${registerResult.data.username}' registado com sucesso.`);
-        
-        // 2. Envia sucesso de volta ao cliente
-        socket.emit('register:success', { 
-            message: 'Conta criada com sucesso!'
-        });
-    });
+    socket.on('login:attempt', (data) => handleLoginAttempt(socket, data));
+    socket.on('register:attempt', (data) => handleRegisterAttempt(socket, data));
 }
